@@ -109,6 +109,14 @@ public class JdbcLoginAttemptRepository implements LoginAttemptRepository {
     }
 
     @Override
+    public int countRecentFailures(long userId, Instant since) {
+        Integer sum = jdbc.queryForObject(
+                "SELECT COALESCE(SUM(fail_count), 0) FROM adm_login_attempt WHERE user_id = ? AND updated_at >= ?",
+                Integer.class, userId, JdbcSupport.timestamp(since));
+        return sum == null ? 0 : sum;
+    }
+
+    @Override
     public void lockUser(long userId, String ip, Instant until) {
         jdbc.update("UPDATE adm_login_attempt SET locked_until = ?, updated_at = ? WHERE user_id = ? AND ip = ?",
                 JdbcSupport.timestamp(until), JdbcSupport.timestamp(Instant.now()), userId, ip);

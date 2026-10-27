@@ -6,6 +6,7 @@ import com.aseantec.adminauth.core.domain.MfaFactorType;
 import com.aseantec.adminauth.core.domain.MfaVerificationException;
 import com.aseantec.adminauth.core.domain.TotpSetupResult;
 import com.aseantec.adminauth.core.service.MfaService;
+import com.aseantec.adminauth.core.service.LockoutService;
 import com.aseantec.adminauth.starter.AdminAuthProperties;
 import com.aseantec.adminauth.starter.admin.AdminAuthTransactionalOperations;
 import com.aseantec.adminauth.starter.security.AdminSessionPrincipal;
@@ -37,6 +38,7 @@ public class MfaApiController {
     private final AdminUserProvider userProvider;
     private final QrCodeService qrCodeService;
     private final AdminAuthProperties properties;
+    private final LockoutService lockout;
 
     public MfaApiController(MfaService mfaService,
                             AdminAuthTransactionalOperations operations,
@@ -44,7 +46,8 @@ public class MfaApiController {
                             AdminSessionService sessions,
                             AdminUserProvider userProvider,
                             QrCodeService qrCodeService,
-                            AdminAuthProperties properties) {
+                            AdminAuthProperties properties,
+                            LockoutService lockout) {
         this.mfaService = mfaService;
         this.operations = operations;
         this.tickets = tickets;
@@ -52,6 +55,7 @@ public class MfaApiController {
         this.userProvider = userProvider;
         this.qrCodeService = qrCodeService;
         this.properties = properties;
+        this.lockout = lockout;
     }
 
     @PostMapping("/mfa/verify")
@@ -83,6 +87,8 @@ public class MfaApiController {
             throw new ApiException(code, "验证码不正确");
         }
         tickets.consume(session, ticket.value());
+        // 2FA 通过：清掉该账号的风险计数（ON_RISK 依赖它判断下一次登录）
+        lockout.clearAllForUser(ticket.userId());
         AdminUser user = requireUser(ticket.userId());
         sessions.establish(request, user, true);
         return new ApiModels.LoginResponse("OK", null, List.of(), ApiModels.UserView.of(user));
@@ -100,6 +106,7 @@ public class MfaApiController {
             throw new ApiException(code, "恢复码不正确或已使用");
         }
         tickets.consume(session, ticket.value());
+        lockout.clearAllForUser(ticket.userId());
         AdminUser user = requireUser(ticket.userId());
         sessions.establish(request, user, true);
         return new ApiModels.LoginResponse("OK", null, List.of(), ApiModels.UserView.of(user));
@@ -134,6 +141,7 @@ public class MfaApiController {
         if (ticket != null) {
             // 绑定完成即视为本次登录通过第二因素，直接建会话（第 7 段 curl 验收依赖此行为）
             tickets.consume(session, ticket.value());
+            lockout.clearAllForUser(userId);
             AdminUser user = requireUser(userId);
             sessions.establish(request, user, true);
             return new ApiModels.TotpConfirmResponse(recoveryCodes, "OK", ApiModels.UserView.of(user));

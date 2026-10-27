@@ -31,5 +31,8 @@ public interface LoginAttemptRepository {
     /** 管理员解锁：清除该账号在所有 IP 上的失败计数。 */
     void clearAllForUser(long userId);
 
+    /** 统计该账号在指定时间之后（跨 IP）的失败次数，用于 ON_RISK 风险判定。 */
+    int countRecentFailures(long userId, Instant since);
+
     void lockUser(long userId, String ip, Instant until);
 }

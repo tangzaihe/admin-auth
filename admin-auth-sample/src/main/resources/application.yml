@@ -56,8 +56,11 @@ admin-auth:
 
   mfa:
     # OFF / OPTIONAL / REQUIRED_BY_ROLE / REQUIRED_ALL
-    # 组件默认 OPTIONAL；示例用 REQUIRED_ALL 以便一次跑通"首次登录必须绑定 TOTP"的验收路径
-    mode: REQUIRED_ALL
+    # OFF / ON_RISK / OPTIONAL / REQUIRED_BY_ROLE / REQUIRED_ALL
+    # ON_RISK：平时只验密码；该账号在 risk-window 内输错过密码，才要求 TOTP（且需已绑定）
+    mode: ON_RISK
+    risk-window: 30m
+    risk-min-failures: 1
     required-roles:
       - SUPER_ADMIN
     require-totp-roles:

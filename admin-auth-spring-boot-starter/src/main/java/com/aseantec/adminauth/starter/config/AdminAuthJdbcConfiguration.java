@@ -136,9 +136,11 @@ public class AdminAuthJdbcConfiguration {
                                      LockoutService lockoutService,
                                      MfaPolicy mfaPolicy,
                                      AuditSink auditSink,
-                                     ClockProvider clock) {
+                                     ClockProvider clock,
+                                     AdminAuthProperties properties) {
         return new LoginService(users, identities, factors, normalizer, blindIndexer, passwordVerifier,
-                lockoutService, mfaPolicy, auditSink, clock);
+                lockoutService, mfaPolicy, auditSink, clock,
+                properties.getMfa().getRiskWindow(), properties.getMfa().getRiskMinFailures());
     }
 
     @Bean

@@ -24,6 +24,7 @@ import com.aseantec.adminauth.core.port.PasswordVerifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -57,6 +58,8 @@ public class LoginService {
     private final MfaPolicy mfaPolicy;
     private final AuditSink audit;
     private final ClockProvider clock;
+    private final Duration riskWindow;
+    private final int riskMinFailures;
     private final String dummyHash;
 
     public LoginService(AdminUserRepository users,
@@ -68,7 +71,9 @@ public class LoginService {
                         LockoutService lockout,
                         MfaPolicy mfaPolicy,
                         AuditSink audit,
-                        ClockProvider clock) {
+                        ClockProvider clock,
+                        Duration riskWindow,
+                        int riskMinFailures) {
         this.users = users;
         this.identities = identities;
         this.factors = factors;
@@ -79,6 +84,8 @@ public class LoginService {
         this.mfaPolicy = mfaPolicy;
         this.audit = audit;
         this.clock = clock;
+        this.riskWindow = riskWindow;
+        this.riskMinFailures = riskMinFailures;
         // 启动时生成一次 dummy hash：账号不存在时也执行同样成本的 BCrypt，避免时间侧信道枚举账号
         this.dummyHash = passwordVerifier.hash(UUID.randomUUID().toString());
     }
@@ -128,29 +135,36 @@ public class LoginService {
             throw new LoginFailedException(LoginFailure.AUTH_FAILED);
         }
 
-        // 3) 成功：清计数、更新时间、审计
-        lockout.clear(index, ip, user.id());
+        // 3) 成功：评估风险（窗口内是否有密码失败），更新时间与审计
+        boolean risk = lockout.hasRecentFailures(user.id(), riskWindow, riskMinFailures);
         users.updateLastLogin(user.id(), now);
-        recordAudit(user, type, identity, AuditEvent.LOGIN_PASSWORD_OK, AuditResult.SUCCESS, ip, userAgent, null, now);
+        recordAudit(user, type, identity, AuditEvent.LOGIN_PASSWORD_OK, AuditResult.SUCCESS, ip, userAgent,
+                risk ? "{\"risk\":true}" : null, now);
 
         // 4) 初始改密优先于 2FA
         if (user.mustChangePassword()) {
+            lockout.clear(index, ip, user.id());
             return new LoginResult(LoginStep.CHANGE_PASSWORD, user, List.of());
         }
-        return mfaStep(user, type);
+        LoginResult result = mfaStep(user, type, risk);
+        if (result.step() == LoginStep.COMPLETE) {
+            // 没有后续 MFA 时才清计数；要求 MFA 时保留到校验成功，避免失败证据被提前清掉
+            lockout.clear(index, ip, user.id());
+        }
+        return result;
     }
 
-    /** 初始改密完成后继续判定 2FA 步骤。 */
+    /** 初始改密完成后继续判定 2FA 步骤（此时计数已在登录成功时清零，无风险标记）。 */
     public LoginResult continueAfterPasswordChange(long userId, IdentityType identityType) {
         AdminUser user = users.findById(userId)
                 .orElseThrow(() -> new LoginFailedException(LoginFailure.AUTH_FAILED));
-        return mfaStep(user, identityType);
+        return mfaStep(user, identityType, false);
     }
 
     /** 2FA 策略判定：COMPLETE / SELECT_FACTOR / BIND_TOTP。 */
-    private LoginResult mfaStep(AdminUser user, IdentityType identityType) {
+    private LoginResult mfaStep(AdminUser user, IdentityType identityType, boolean risk) {
         List<MfaFactor> active = factors.findActiveByUserId(user.id());
-        MfaDecision decision = mfaPolicy.decide(user, identityType, active);
+        MfaDecision decision = mfaPolicy.decide(user, identityType, active, risk);
         if (!decision.required()) {
             return new LoginResult(LoginStep.COMPLETE, user, List.of());
         }

@@ -96,6 +96,25 @@ public class LockoutService {
         }
     }
 
+    /**
+     * 该账号在窗口期内是否有密码失败（跨 IP），用于 ON_RISK 模式。
+     *
+     * @param window      统计窗口；null/0 表示不启用风险判定
+     * @param minFailures 触发阈值（默认 1）
+     */
+    public boolean hasRecentFailures(long userId, Duration window, int minFailures) {
+        if (window == null || window.isZero() || window.isNegative()) {
+            return false;
+        }
+        int count = repository.countRecentFailures(userId, clock.now().minus(window));
+        return count >= Math.max(1, minFailures);
+    }
+
+    /** 清除该账号所有 IP 的失败计数（MFA 成功后调用）。 */
+    public void clearAllForUser(long userId) {
+        repository.clearAllForUser(userId);
+    }
+
     public int maxAttempts() {
         return maxAttempts;
     }

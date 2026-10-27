@@ -213,13 +213,33 @@ public class AdminAuthProperties {
     /** 2FA 策略配置。 */
     public static class Mfa {
 
-        /** 默认 OPTIONAL：已绑定即校验；host 可按需改为 REQUIRED_BY_ROLE / REQUIRED_ALL。 */
+        /** 默认 OPTIONAL：已绑定即校验；host 可按需改为 ON_RISK / REQUIRED_BY_ROLE / REQUIRED_ALL。 */
         private MfaPolicyMode mode = MfaPolicyMode.OPTIONAL;
         private Set<String> requiredRoles = new LinkedHashSet<>();
         private Set<String> requireTotpRoles = new LinkedHashSet<>();
         private boolean forbidSameChannel = true;
         private Duration stepUpTtl = Duration.ofMinutes(5);
+        /** ON_RISK：窗口期内有密码失败才要求 TOTP。 */
+        private Duration riskWindow = Duration.ofMinutes(30);
+        /** ON_RISK：窗口期内至少失败几次才触发（默认 1）。 */
+        private int riskMinFailures = 1;
         private Totp totp = new Totp();
+
+        public Duration getRiskWindow() {
+            return riskWindow;
+        }
+
+        public void setRiskWindow(Duration riskWindow) {
+            this.riskWindow = riskWindow;
+        }
+
+        public int getRiskMinFailures() {
+            return riskMinFailures;
+        }
+
+        public void setRiskMinFailures(int riskMinFailures) {
+            this.riskMinFailures = riskMinFailures;
+        }
 
         public MfaPolicyMode getMode() {
             return mode;

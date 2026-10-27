@@ -2,6 +2,7 @@ package com.aseantec.adminauth.starter.config;
 
 import com.aseantec.adminauth.core.port.ClockProvider;
 import com.aseantec.adminauth.core.service.LoginService;
+import com.aseantec.adminauth.core.service.LockoutService;
 import com.aseantec.adminauth.core.service.MfaService;
 import com.aseantec.adminauth.core.service.PasswordService;
 import com.aseantec.adminauth.starter.admin.AdminAuthTransactionalOperations;
@@ -60,8 +61,10 @@ public class AdminAuthWebConfiguration {
                                                       AdminSessionService sessions,
                                                       AdminUserProvider userProvider,
                                                       QrCodeService qrCodeService,
-                                                      AdminAuthProperties properties) {
-        return new MfaApiController(mfaService, operations, tickets, sessions, userProvider, qrCodeService, properties);
+                                                      AdminAuthProperties properties,
+                                                      LockoutService lockoutService) {
+        return new MfaApiController(mfaService, operations, tickets, sessions, userProvider, qrCodeService,
+                properties, lockoutService);
     }
 
     @Bean

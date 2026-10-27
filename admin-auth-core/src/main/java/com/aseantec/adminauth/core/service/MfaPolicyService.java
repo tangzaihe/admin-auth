@@ -45,8 +45,14 @@ public class MfaPolicyService implements MfaPolicy {
 
     @Override
     public MfaDecision decide(AdminUser user, IdentityType loginIdentityType, List<MfaFactor> activeFactors) {
+        return decide(user, loginIdentityType, activeFactors, false);
+    }
+
+    @Override
+    public MfaDecision decide(AdminUser user, IdentityType loginIdentityType,
+                              List<MfaFactor> activeFactors, boolean risk) {
         List<MfaFactor> factors = activeFactors == null ? List.of() : activeFactors;
-        if (!required(user, factors)) {
+        if (!required(user, factors, risk)) {
             return MfaDecision.notRequired();
         }
         List<MfaFactor> eligible = new ArrayList<>();
@@ -75,6 +81,11 @@ public class MfaPolicyService implements MfaPolicy {
 
     /** 用户是否需要 2FA（含用户级覆盖）。 */
     public boolean required(AdminUser user, List<MfaFactor> factors) {
+        return required(user, factors, false);
+    }
+
+    /** 用户是否需要 2FA（含用户级覆盖与风险标记）。 */
+    public boolean required(AdminUser user, List<MfaFactor> factors, boolean risk) {
         if (user.mfaRequired() == 0) {
             return false;
         }
@@ -84,6 +95,8 @@ public class MfaPolicyService implements MfaPolicy {
         boolean hasActiveFactor = factors != null && factors.stream().anyMatch(MfaFactor::active);
         return switch (mode) {
             case OFF -> false;
+            // 风险触发：只有近期密码失败且已绑定因素时才要求；未绑定则跳过（避免因输错一次密码被迫绑定）
+            case ON_RISK -> risk && hasActiveFactor;
             case OPTIONAL -> hasActiveFactor;
             case REQUIRED_BY_ROLE -> requiredRoles.contains(user.role()) || hasActiveFactor;
             case REQUIRED_ALL -> true;
@@ -100,7 +113,8 @@ public class MfaPolicyService implements MfaPolicy {
             return true;
         }
         return switch (mode) {
-            case OFF, OPTIONAL -> false;
+            // ON_RISK 不强制绑定/启用，只做风险触发
+            case OFF, OPTIONAL, ON_RISK -> false;
             case REQUIRED_BY_ROLE -> requiredRoles.contains(user.role());
             case REQUIRED_ALL -> true;
         };

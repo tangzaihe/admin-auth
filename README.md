@@ -39,14 +39,16 @@ mvn -pl admin-auth-sample spring-boot:run -Dspring-boot.run.profiles=demo
 - 受保护页：<http://localhost:8080/admin/hello>（未登录 302 到登录页）
 - 初始账号：`admin@corp.example` / `Admin@123456`
   - 首次登录强制改密（≥12 位，且不能与原密码相同）
-  - 示例配置 `admin-auth.mfa.mode=REQUIRED_ALL`，改密后必须绑定 TOTP
-  - 绑定成功一次性展示 10 个恢复码（仅此一次）
+  - 示例配置 `admin-auth.mfa.mode=ON_RISK`：**平时只验密码**；该账号 30 分钟内输错过密码，
+    下一次正确密码登录才要求 TOTP（且需已绑定因素）
+  - 登录后访问 `/admin-auth/totp-setup` 可主动绑定 TOTP，绑定成功一次性展示 10 个恢复码
 - **查看 H2 数据（仅 demo）**：demo profile 额外暴露
   - H2 TCP（仅本机）：`jdbc:h2:tcp://localhost:9092/mem:adminauth`，用户 `sa`、密码空
   - H2 Console：<http://localhost:8080/h2-console>（JDBC URL 同上）
   - 内存库随进程退出清空；生产使用 MySQL 时不启用这些入口
 
-> 组件默认 `mfa.mode=OPTIONAL`；sample 用 `REQUIRED_ALL` 是为了让首次登录就能走完绑定链路。
+> 组件默认 `mfa.mode=OPTIONAL`；示例用 `ON_RISK` 演示"仅风险时二次验证"。
+> 若要复现"首次登录强制绑定 TOTP"的严格流程，用 `--admin-auth.mfa.mode=REQUIRED_ALL` 启动。
 
 ### 2.3 MySQL（默认配置，先占位后修改）
 
@@ -143,7 +145,8 @@ MySQL 下用 `GET_LOCK` 防并发）；生产建议改为 `validate`，由发布
 | `security.mode` | `ISOLATED` | `ISOLATED` / `INTEGRATED` / `FILTER_ONLY` |
 | `security.provide-host-fallback` | true | 追加 LOWEST_PRECEDENCE permitAll 兜底链 |
 | `schema.mode` | `VALIDATE` | `OFF` / `AUTO` / `VALIDATE` |
-| `mfa.mode` | `OPTIONAL` | `OFF` / `OPTIONAL` / `REQUIRED_BY_ROLE` / `REQUIRED_ALL` |
+| `mfa.mode` | `OPTIONAL` | `OFF` / `ON_RISK` / `OPTIONAL` / `REQUIRED_BY_ROLE` / `REQUIRED_ALL` |
+| `mfa.risk-window` / `risk-min-failures` | 30m / 1 | `ON_RISK`：窗口内密码失败达到次数才要求 TOTP |
 | `mfa.required-roles` / `require-totp-roles` | 空 | 角色集合 |
 | `mfa.forbid-same-channel` | true | 邮箱登录禁用 EMAIL_OTP，手机登录禁用 SMS_OTP |
 | `mfa.step-up-ttl` | 5m | 管理接口 step-up 有效期 |
@@ -250,23 +253,30 @@ curl -s -c $JAR -b $JAR -o /dev/null -w '%{http_code}\n' $BASE/admin/hello   # 2
 ```
 
 本仓库的 `scripts/acceptance.ps1` 完整覆盖 13 步（含登出、重登、TOTP 校验、受保护页 200），
-使用 .NET HMAC-SHA1 本地计算 TOTP，无需外部依赖：
+使用 .NET HMAC-SHA1 本地计算 TOTP，无需外部依赖。**该脚本与 `api-test.ps1` 假设 `REQUIRED_ALL`**，
+启动实例时加 `--admin-auth.mfa.mode=REQUIRED_ALL`：
 
 ```powershell
+mvn -pl admin-auth-sample spring-boot:run "-Dspring-boot.run.profiles=demo" `
+  "-Dspring-boot.run.arguments=--server.port=8080 --admin-auth.mfa.mode=REQUIRED_ALL"
 powershell -ExecutionPolicy Bypass -File scripts/acceptance.ps1
 ```
 
+`scripts/demo-risk-mfa.ps1` 演示 `ON_RISK`：干净登录不要求 TOTP，输错一次密码后下一次登录要求 TOTP。
+
 ## 8. 测试
 
-- `admin-auth-core`：35 个单测
+- `admin-auth-core`：38 个单测
   - RFC 6238 官方 SHA1 向量（8 位 6 组）+ Base32 向量
   - 规范化 / 盲索引（固定向量）/ AES-GCM 篡改检测 / 脱敏 / STAFF_CODE
-  - 2FA 策略矩阵（4 模式 × 用户覆盖 × 同源 × require-totp × priority）
-  - 锁定双维度（5 次/15 分钟、换标识不可绕过、到期清零）
+  - 2FA 策略矩阵（5 模式 × 用户覆盖 × 同源 × require-totp × priority，含 ON_RISK 风险窗口）
+  - 锁定双维度（5 次/15 分钟、换标识不可绕过、到期清零、风险窗口计数）
+
 - `admin-auth-spring-boot-starter`：`AdminAuthFlowIT`（Testcontainers MySQL）
   - 登录 → 改密 → 绑 TOTP → `/api/me` → `/admin/hello` → 登出 → 重登 → TOTP → 200
   - `@Testcontainers(disabledWithoutDocker = true)`：无 Docker 自动跳过
-- `scripts/acceptance.ps1`：13 步主链路验收
+- `scripts/acceptance.ps1`：13 步主链路验收（需 `REQUIRED_ALL`）
+- `scripts/demo-risk-mfa.ps1`：ON_RISK 行为演示（干净登录 / 错误密码后触发 TOTP / 风险清除）
 - `scripts/api-test.ps1`：**67 项接口契约测试**（匿名、登录、改密、2FA、恢复码、管理端、
   用户生命周期、CSRF、锁定、错误码、会话失效；跑完打印可用于 UI 登录的最终密码/TOTP 密钥）
 

@@ -123,6 +123,28 @@ class MfaPolicyServiceTest {
         assertThat(decision.factorTypes()).containsExactly(MfaFactorType.TOTP, MfaFactorType.SMS_OTP);
     }
 
+    @Test
+    @DisplayName("ON_RISK：无风险不要求；有风险且已绑定才要求；未绑定则跳过（避免因输错密码被迫绑定）")
+    void onRisk() {
+        MfaPolicyService policy = policy(MfaPolicyMode.ON_RISK, Set.of(), Set.of(), true);
+
+        assertThat(policy.decide(user("ADMIN", -1), IdentityType.EMAIL, List.of(totp()), false).required())
+                .isFalse();
+        MfaDecision risky = policy.decide(user("ADMIN", -1), IdentityType.EMAIL, List.of(totp()), true);
+        assertThat(risky.required()).isTrue();
+        assertThat(risky.selectFactor()).isTrue();
+        assertThat(risky.factorTypes()).containsExactly(MfaFactorType.TOTP);
+
+        assertThat(policy.decide(user("ADMIN", -1), IdentityType.EMAIL, List.of(), true).required())
+                .isFalse();
+
+        // 用户级覆盖仍优先
+        assertThat(policy.decide(user("ADMIN", 1), IdentityType.EMAIL, List.of(), false).required())
+                .isTrue();
+        assertThat(policy.decide(user("ADMIN", 0), IdentityType.EMAIL, List.of(totp()), true).required())
+                .isFalse();
+    }
+
     // ---------- fixtures ----------
 
     private MfaPolicyService policy(MfaPolicyMode mode, Set<String> requiredRoles,

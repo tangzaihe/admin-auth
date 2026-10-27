@@ -96,6 +96,21 @@ class LockoutServiceTest {
         assertThat(lockout.isUserLocked(1L, IP)).isFalse();
     }
 
+    @Test
+    @DisplayName("ON_RISK 风险窗口：窗口内计数、窗口外过期、清空后归零")
+    void recentFailuresWindow() {
+        lockout.registerFailure(IDENTITY_A, IP, 1L);
+        assertThat(lockout.hasRecentFailures(1L, Duration.ofMinutes(30), 1)).isTrue();
+        assertThat(lockout.hasRecentFailures(1L, Duration.ofMinutes(30), 2)).isFalse();
+
+        clock.advance(Duration.ofMinutes(31));
+        assertThat(lockout.hasRecentFailures(1L, Duration.ofMinutes(30), 1)).isFalse();
+
+        lockout.registerFailure(IDENTITY_A, IP, 1L);
+        lockout.clearAllForUser(1L);
+        assertThat(lockout.hasRecentFailures(1L, Duration.ofMinutes(30), 1)).isFalse();
+    }
+
     // ---------- in-memory fixtures ----------
 
     private static final class MutableClock implements ClockProvider {
@@ -191,6 +206,15 @@ class LockoutServiceTest {
         @Override
         public void clearAllForUser(long userId) {
             rows.values().removeIf(row -> row.userId != null && row.userId == userId);
+        }
+
+        @Override
+        public int countRecentFailures(long userId, Instant since) {
+            return rows.values().stream()
+                    .filter(row -> row.userId != null && row.userId == userId)
+                    .filter(row -> row.updatedAt != null && !row.updatedAt.isBefore(since))
+                    .mapToInt(row -> row.failCount)
+                    .sum();
         }
 
         @Override
