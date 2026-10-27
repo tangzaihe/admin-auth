@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>内部管理端 · 恢复码</title>
+    <link rel="stylesheet" th:href="@{/admin-auth/app.css}"/>
+</head>
+<body class="aa-body">
+<main class="aa-card aa-wide">
+    <div class="aa-brand">恢复码（仅展示一次）</div>
+    <p class="aa-sub">当认证器不可用时，每个恢复码可登录一次。请打印或保存到密码管理器，切勿截图外发。</p>
+
+    <ol class="aa-codes" id="aa-codes"></ol>
+    <p id="aa-message" class="aa-message" role="alert"></p>
+
+    <div class="aa-actions">
+        <button class="aa-btn aa-secondary" type="button" id="aa-copy-codes">复制全部</button>
+        <button class="aa-btn" type="button" id="aa-continue">我已保存，进入系统</button>
+    </div>
+
+    <p class="aa-foot">该列表关闭后无法再次查看；如需重新生成，请重置 2FA。</p>
+</main>
+
+<script th:inline="javascript">
+    window.AA_PREFIX = /*[[@{/admin-auth}]]*/ '/admin-auth';
+</script>
+<script th:src="@{/admin-auth/app.js}"></script>
+<script>AA.recoveryCodesPage();</script>
+</body>
+</html>

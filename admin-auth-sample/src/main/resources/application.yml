@@ -1,0 +1,98 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: admin-auth-sample
+
+  # 启动方式：
+  #   本机 H2 demo（无需 MySQL）：--spring.profiles.active=demo
+  #   连接 MySQL（环境变量）：--spring.profiles.active=mysql
+  # 默认 datasource 指向本机 MySQL，账号口令为占位，需按环境修改
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/admin_auth?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&useSSL=false&allowPublicKeyRetrieval=true
+    username: CHANGE_ME
+    password: CHANGE_ME
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+
+  # 组件自带迁移执行器（独立 history 表 adm_schema_history），必须关闭 Boot 默认 Flyway
+  flyway:
+    enabled: false
+
+  session:
+    timeout: 30m
+    jdbc:
+      initialize-schema: never
+      table-name: ADM_SESSION
+
+  thymeleaf:
+    cache: false
+
+admin-auth:
+  enabled: true
+  endpoint-prefix: /admin-auth
+  protected-paths:
+    - /admin/**
+
+  schema:
+    # auto=启动时自动迁移（开发/PoC）；生产建议 validate，由发布流程执行 SQL
+    mode: auto
+    table: adm_schema_history
+    locations: classpath:db/migration/admin-auth
+
+  security:
+    mode: ISOLATED
+    provide-host-fallback: true
+
+  session:
+    cookie-name: JSESSIONID
+    secure-cookie: false      # 本地 HTTP 调试；生产必须 true
+    same-site: Lax
+    idle: 30m
+    absolute: 8h
+
+  mfa:
+    # OFF / OPTIONAL / REQUIRED_BY_ROLE / REQUIRED_ALL
+    # 组件默认 OPTIONAL；示例用 REQUIRED_ALL 以便一次跑通"首次登录必须绑定 TOTP"的验收路径
+    mode: REQUIRED_ALL
+    required-roles:
+      - SUPER_ADMIN
+    require-totp-roles:
+      - SUPER_ADMIN
+    forbid-same-channel: true
+    step-up-ttl: 5m
+    totp:
+      issuer: Admin Auth
+      digits: 6
+      period: 30
+      window: 1
+
+  password:
+    min-length: 12
+    bcrypt-cost: 12
+
+  lockout:
+    max-attempts: 5
+    lock-duration: 15m
+
+  # ===========================================================================
+  # 密钥：必须 32 字节。支持 env:NAME / base64:... / 明文
+  # TODO: 生产改为 env:ADMIN_AUTH_DATA_KEK 等，切勿提交真实密钥
+  # ===========================================================================
+  keys:
+    data-kek: "base64:POKbxwe2t8jynIsNN/p6K7ACzxbtPJ1p8P4xojQw8+Y="
+    index-key: "base64:jDEnLohFN31dFWAABDr13ddDyUWMDFyP702qIYfNkS8="
+    otp-key: "base64:4LVWTtuXh/xs9o1SIit4BCxlp/PmhYFmwDcjAhaKukw="
+
+  bootstrap:
+    enabled: true
+    email: admin@corp.example
+    password: Admin@123456
+    display-name: 系统管理员
+    role: SUPER_ADMIN
+
+  audit:
+    enabled: true

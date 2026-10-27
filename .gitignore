@@ -1,0 +1,41 @@
+# ---------- build output ----------
+target/
+build/
+out/
+*.class
+*.jar
+*.war
+*.ear
+
+# ---------- IDE ----------
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+
+# ---------- logs / runtime data ----------
+*.log
+logs/
+data/
+*.db
+*.mv.db
+*.trace.db
+*.lock.db
+
+# ---------- local env / secrets ----------
+.env
+.env.*
+application-local.yml
+application-local.yaml
+*.local.yml
+*.local.yaml
+
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
+desktop.ini

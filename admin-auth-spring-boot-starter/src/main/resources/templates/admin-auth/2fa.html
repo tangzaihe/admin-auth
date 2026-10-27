@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>内部管理端 · 二次验证</title>
+    <link rel="stylesheet" th:href="@{/admin-auth/app.css}"/>
+</head>
+<body class="aa-body">
+<main class="aa-card">
+    <div class="aa-brand">二次验证</div>
+    <p class="aa-sub">请输入 <strong id="aa-factor-label">认证器动态码</strong>（30 秒刷新）</p>
+
+    <form id="aa-2fa-form" class="aa-form">
+        <label class="aa-field">动态码
+            <input id="aa-code" inputmode="numeric" autocomplete="one-time-code" maxlength="8"
+                   pattern="[0-9 ]*" placeholder="6 位数字" required/>
+        </label>
+        <button class="aa-btn" type="submit">验 证</button>
+        <p id="aa-message" class="aa-message" role="alert"></p>
+    </form>
+
+    <button class="aa-link-button" id="aa-use-recovery" type="button">使用恢复码登录</button>
+
+    <form id="aa-recovery-form" class="aa-form aa-hidden">
+        <label class="aa-field">恢复码
+            <input id="aa-recovery-code" autocomplete="off" placeholder="XXXXX-XXXXX" required/>
+        </label>
+        <button class="aa-btn" type="submit">用恢复码登录</button>
+        <p id="aa-recovery-message" class="aa-message" role="alert"></p>
+    </form>
+
+    <p class="aa-foot"><a id="aa-back-login" href="#">返回登录</a></p>
+</main>
+
+<script th:inline="javascript">
+    window.AA_PREFIX = /*[[@{/admin-auth}]]*/ '/admin-auth';
+</script>
+<script th:src="@{/admin-auth/app.js}"></script>
+<script>AA.twoFactorPage();</script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>内部管理端 · 登录</title>
+    <link rel="stylesheet" th:href="@{/admin-auth/app.css}"/>
+</head>
+<body class="aa-body">
+<main class="aa-card">
+    <div class="aa-brand">内部管理端</div>
+    <p class="aa-sub">账号密码 + 动态口令（TOTP）双重验证</p>
+
+    <form id="aa-login-form" class="aa-form">
+        <label class="aa-field">登录方式
+            <select id="aa-identity-type">
+                <option value="EMAIL">邮箱</option>
+                <option value="PHONE">手机号</option>
+                <option value="STAFF_CODE">员工码</option>
+            </select>
+        </label>
+        <label class="aa-field">账号
+            <input id="aa-identifier" name="username" autocomplete="username" required/>
+        </label>
+        <label class="aa-field">密码
+            <input id="aa-password" name="password" type="password" autocomplete="current-password" required/>
+        </label>
+        <button class="aa-btn" type="submit">登 录</button>
+        <p id="aa-message" class="aa-message" role="alert"></p>
+    </form>
+
+    <p class="aa-foot">如需帮助请联系信息安全团队</p>
+</main>
+
+<script th:inline="javascript">
+    window.AA_PREFIX = /*[[@{/admin-auth}]]*/ '/admin-auth';
+</script>
+<script th:src="@{/admin-auth/app.js}"></script>
+<script>AA.loginPage();</script>
+</body>
+</html>

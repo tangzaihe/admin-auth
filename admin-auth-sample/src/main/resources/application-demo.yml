@@ -1,0 +1,29 @@
+# 本机 H2 演示：无需 MySQL 即可完整跑通「登录 → 改密 → 绑 TOTP → 重登」
+spring:
+  datasource:
+    url: jdbc:h2:mem:adminauth;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema-h2.sql
+      continue-on-error: false
+  session:
+    jdbc:
+      initialize-schema: never
+      table-name: ADM_SESSION
+  # 仅 demo：H2 Console（/h2-console）便于浏览器查看内存库
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: false
+
+admin-auth:
+  schema:
+    mode: off          # 表由 schema-h2.sql 建立，不启用 Flyway
+  session:
+    secure-cookie: false

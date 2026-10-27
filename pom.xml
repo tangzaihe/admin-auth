@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.aseantec</groupId>
+    <artifactId>admin-auth-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>admin-auth-parent</name>
+    <description>内部管理端嵌入式认证组件（Spring Boot Starter）</description>
+
+    <modules>
+        <module>admin-auth-bom</module>
+        <module>admin-auth-core</module>
+        <module>admin-auth-spring-boot-starter</module>
+        <module>admin-auth-sample</module>
+    </modules>
+
+    <properties>
+        <java.version>21</java.version>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <spring-boot.version>3.5.6</spring-boot.version>
+        <testcontainers.version>1.20.4</testcontainers.version>
+        <qrcodegen.version>1.8.0</qrcodegen.version>
+
+        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+        <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
+        <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- 先导入 testcontainers-bom，确保 1.20.4 不被 Boot BOM 覆盖（先声明者优先） -->
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.nayuki</groupId>
+                <artifactId>qrcodegen</artifactId>
+                <version>${qrcodegen.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.aseantec</groupId>
+                <artifactId>admin-auth-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.aseantec</groupId>
+                <artifactId>admin-auth-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.aseantec</groupId>
+                <artifactId>admin-auth-sample</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${maven-compiler-plugin.version}</version>
+                    <configuration>
+                        <release>${maven.compiler.release}</release>
+                        <parameters>true</parameters>
+                        <encoding>${project.build.sourceEncoding}</encoding>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${maven-surefire-plugin.version}</version>
+                    <configuration>
+                        <includes>
+                            <include>**/*Test.java</include>
+                            <include>**/*IT.java</include>
+                        </includes>
+                        <trimStackTrace>false</trimStackTrace>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>${maven-jar-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring-boot.version}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>

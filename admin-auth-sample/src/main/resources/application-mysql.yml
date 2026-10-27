@@ -1,0 +1,14 @@
+# MySQL 联调/生产模板：连接信息全部走环境变量，禁止把真实口令提交进仓库
+spring:
+  datasource:
+    url: ${ADMIN_AUTH_DB_URL:jdbc:mysql://127.0.0.1:3306/admin_auth?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&useSSL=true}
+    username: ${ADMIN_AUTH_DB_USER:admin_auth}
+    password: ${ADMIN_AUTH_DB_PASSWORD:CHANGE_ME}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+admin-auth:
+  schema:
+    # 生产建议 validate（schema 由发布流程执行），联调可用 auto
+    mode: ${ADMIN_AUTH_SCHEMA_MODE:auto}
+  session:
+    secure-cookie: ${ADMIN_AUTH_SECURE_COOKIE:true}

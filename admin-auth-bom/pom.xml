@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.aseantec</groupId>
+        <artifactId>admin-auth-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>admin-auth-bom</artifactId>
+    <packaging>pom</packaging>
+    <name>admin-auth-bom</name>
+    <description>admin-auth 自研模块版本 BOM（core / starter / sample / bom 共 4 个模块）</description>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.aseantec</groupId>
+                <artifactId>admin-auth-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.aseantec</groupId>
+                <artifactId>admin-auth-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.aseantec</groupId>
+                <artifactId>admin-auth-sample</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <!-- BOM 自身坐标：宿主以 pom 依赖/导入时无需写版本；不 import 自身，避免循环 -->
+            <dependency>
+                <groupId>com.aseantec</groupId>
+                <artifactId>admin-auth-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>
