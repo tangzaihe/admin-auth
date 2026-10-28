@@ -8,6 +8,7 @@ import com.aseantec.adminauth.core.domain.AuditResult;
 import com.aseantec.adminauth.core.domain.FactorStatus;
 import com.aseantec.adminauth.core.domain.MfaFactor;
 import com.aseantec.adminauth.core.domain.MfaFactorType;
+import com.aseantec.adminauth.core.domain.MfaFailureReason;
 import com.aseantec.adminauth.core.domain.MfaVerificationException;
 import com.aseantec.adminauth.core.domain.RecoveryCode;
 import com.aseantec.adminauth.core.domain.TotpSetupResult;
@@ -109,7 +110,7 @@ public class MfaService {
     public TotpSetupResult beginTotpSetup(long userId, String accountName) {
         requireUser(userId);
         if (factors.findActiveByUserIdAndType(userId, MfaFactorType.TOTP).isPresent()) {
-            throw new IllegalStateException("TOTP 已绑定，请先停用后再重新绑定");
+            throw new MfaVerificationException(MfaFailureReason.ALREADY_BOUND);
         }
         byte[] secret = totp.randomSecret();
         String base32 = totp.encodeBase32(secret);
@@ -132,13 +133,13 @@ public class MfaService {
     /** 确认绑定：校验首个动态码，激活因素并一次性返回恢复码明文。 */
     public List<String> confirmTotpSetup(long userId, String code) {
         MfaFactor pending = factors.findPendingByUserIdAndType(userId, MfaFactorType.TOTP)
-                .orElseThrow(() -> new MfaVerificationException("TOTP 绑定已失效，请重新开始"));
+                .orElseThrow(() -> new MfaVerificationException(MfaFailureReason.SETUP_EXPIRED));
         Instant now = clock.now();
         byte[] secret = cipher.decrypt(pending.keyVersion(), pending.secretEnc());
         long step = totp.matchStep(secret, code, now.getEpochSecond(),
                 pending.digits(), pending.period(), settings.window());
         if (step < 0) {
-            throw new MfaVerificationException("验证码不正确");
+            throw new MfaVerificationException(MfaFailureReason.CODE_INVALID);
         }
         factors.activate(pending.id(), now);
         factors.advanceLastUsedStep(pending.id(), step, now);
@@ -161,13 +162,13 @@ public class MfaService {
                 .filter(f -> f.factorType() == MfaFactorType.TOTP)
                 .toList();
         if (totpFactors.isEmpty()) {
-            throw new MfaVerificationException("尚未绑定 TOTP");
+            throw new MfaVerificationException(MfaFailureReason.NOT_BOUND);
         }
         for (MfaFactor factor : totpFactors) {
             if (factor.lockedAt(now)) {
                 recordAudit(userId, MfaFactorType.TOTP, AuditEvent.MFA_VERIFY_FAIL, AuditResult.FAIL, now,
                         "{\"reason\":\"FACTOR_LOCKED\"}");
-                throw new MfaVerificationException("第二因素尝试次数过多，请稍后再试", true);
+                throw new MfaVerificationException(MfaFailureReason.TOO_MANY_ATTEMPTS, true);
             }
             byte[] secret = cipher.decrypt(factor.keyVersion(), factor.secretEnc());
             long step = totp.matchStep(secret, code, now.getEpochSecond(),
@@ -241,7 +242,7 @@ public class MfaService {
         recordAudit(factor.userId(), MfaFactorType.TOTP, AuditEvent.MFA_VERIFY_FAIL, AuditResult.FAIL, now,
                 "{\"reason\":\"" + reason + "\"}");
         if (lockedUntil != null) {
-            throw new MfaVerificationException("第二因素尝试次数过多，请稍后再试", true);
+            throw new MfaVerificationException(MfaFailureReason.TOO_MANY_ATTEMPTS, true);
         }
     }
 

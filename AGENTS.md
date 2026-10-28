@@ -82,6 +82,8 @@ admin-auth-bom（版本 BOM）
 - 算法与服务：`crypto/`、`util/`、`service/`（`LoginService`、`MfaService`、`MfaPolicyService`、
   `LockoutService`、`PasswordService`、`TotpService`）
 - **不出现** Spring 注解、`@Transactional`、`JdbcTemplate`、HTTP 类型、JSON 序列化。
+- **不出现最终文案**：异常只携带原因枚举 / 消息键与参数（`PasswordPolicyReason`、`MfaFailureReason`），
+  翻译统一在 starter 的 `AdminAuthMessages` 完成。core 可以出现稳定键字符串，但不能出现给终端用户看的文案。
 
 ### starter（装配与适配）
 - `AdminAuthAutoConfiguration` + `AdminAuthProperties` + `config/*` 装配
@@ -89,8 +91,10 @@ admin-auth-bom（版本 BOM）
 - `security/*`：三种 Security 模式、会话、EntryPoint、过滤器
 - `web/*`：REST 控制器、错误码、ticket、二维码、页面控制器
 - `admin/*`：用户生命周期与事务边界
+- `i18n/*`：`AdminAuthMessages`（SPI）+ `BundleAdminAuthMessages`（ResourceBundle 实现）
 - `schema/*`、`bootstrap/*`、`startup/*`：迁移、引导、启动编排
-- `src/main/resources`：迁移 SQL、模板、静态资源、`META-INF/spring/...AutoConfiguration.imports`
+- `src/main/resources`：迁移 SQL、模板、静态资源、`i18n/admin-auth-messages*.properties`、
+  `META-INF/spring/...AutoConfiguration.imports`
 
 ### sample（示例宿主）
 - 只做"如何接入"的示范；demo-only 的 H2 TCP/Console 仅 `@Profile("demo")`。
@@ -106,7 +110,8 @@ admin-auth-bom（版本 BOM）
 
 ## 4. 安全不变量（MUST）
 
-1. **密码**：BCrypt（cost ≥ 12）；账号不存在也执行一次 dummy hash；失败文案统一为"账号或密码错误"。
+1. **密码**：BCrypt（cost ≥ 12）；账号不存在也执行一次 dummy hash；失败文案统一为
+   "账号或密码错误"（消息键 `admin-auth.error.auth-failed`，中英两份 bundle 同步）。
 2. **盲索引**：`HMAC-SHA256(indexKey, "TYPE|normalized|v1")` → 32B；登录查询只走 `value_hash`。
 3. **加密**：AES-256-GCM（`iv12 || ct || tag16`）；解密必须传 `key_version`，禁止只用当前密钥硬解。
 4. **脱敏**：`value_mask`、审计 `channel_mask` 必须是脱敏值，禁止明文邮箱/手机号。
@@ -155,7 +160,14 @@ admin-auth-bom（版本 BOM）
 ## 7. API 契约
 
 - 前缀 `admin-auth.endpoint-prefix`（默认 `/admin-auth`），REST 均在 `/api/**` 下。
-- 错误统一 `{"code","message"}`；错误码见 `ApiErrorCode`，不得新增同义码。
+- 错误统一 `{"code","message","messageKey"}`；错误码见 `ApiErrorCode`，不得新增同义码。
+- **i18n 契约**：
+  - `code` 与 `messageKey` 是稳定契约（前端按 `code` 分支），`message` 是本地化文本，**不属契约**；
+  - 新增文案必须同时写 `i18n/admin-auth-messages.properties`（英文，基础）与
+    `admin-auth-messages_zh_CN.properties`（中文），键集合由单测强制一致；
+  - 语言来自 `Locale`（默认 `Accept-Language`）；`admin-auth.i18n.enabled=false` 时固定默认语言；
+  - 禁止在代码里直接 `MessageSource` 解析本组件文案；禁止注册 `messageSource` Bean 覆盖宿主 i18n；
+  - 日志、审计 `detail`、库内业务数据**不做 i18n**。
 - 新增端点必须同时满足：
   1. README API 表登记；
   2. 鉴权（未登录/角色/step-up）与 CSRF 策略明确；
@@ -182,6 +194,7 @@ admin-auth-bom（版本 BOM）
 | 启动顺序/迁移/引导 | `AdminAuthStartupCoordinator` + `schema/*` + `bootstrap/*` |
 | 页面/JS | `resources/templates/admin-auth/*` + `static/admin-auth/app.js` + `AdminAuthPageController` |
 | 审计事件 | `core/domain/AuditEvent` + 写入点（`AuditSink`） |
+| 文案/多语言 | `starter/i18n/*` + `resources/i18n/admin-auth-messages*.properties` + 页面模板 `i18n[...]` |
 | 新配置 | `AdminAuthProperties` + `config/*` + README |
 
 ---
@@ -190,7 +203,7 @@ admin-auth-bom（版本 BOM）
 
 | 项 | 说明 |
 |---|---|
-| `mvn -q test` | 当前 38 个 core 单测；`AdminAuthFlowIT` 无 Docker 时 Skipped |
+| `mvn -q test` | 38 个 core 单测 + 13 个 starter 单测；`AdminAuthFlowIT` 无 Docker 时 Skipped |
 | `scripts/api-test.ps1` | 67 项接口契约；**假设 `REQUIRED_ALL`** |
 | `scripts/acceptance.ps1` | 13 步主链路；**假设 `REQUIRED_ALL`** |
 | `scripts/demo-create-admin.ps1` | SUPER_ADMIN 登录 → 创建 admin（要求全新库） |
@@ -219,6 +232,10 @@ admin-auth-bom（版本 BOM）
 10. `ON_RISK` 与 `REQUIRED_ALL` 的测试前提不同；跑旧脚本要用 `--admin-auth.mfa.mode=REQUIRED_ALL`。
 11. demo 的 H2 TCP 端口 9092 只能被一个实例占用；多实例需换端口或停掉旧实例。
 12. 密钥/口令不得出现在日志、异常信息、提交历史中。
+13. 不要注册 `messageSource` Bean：会顶掉宿主的 `messages.properties` / 自定义 MessageSource；
+    本组件文案只走 `AdminAuthMessages`，页面走模型注入（`i18n`），不用 Thymeleaf `#{}`。
+14. 中英两份 bundle 键集合必须一致（有单测）；只增文案、不改 `code`/`messageKey`；
+    报错定位不要靠字符串匹配（例如"原密码"），一律用异常上的 reason 枚举。
 
 ---
 
@@ -272,6 +289,7 @@ mvn -q test
 - [ ] 未写 `active_hash`；时间仍为 UTC
 - [ ] 新端点：鉴权/CSRF/审计/文档齐全
 - [ ] 新配置：默认值/文档/密钥校验齐全
+- [ ] 文案：中英两份 bundle 同步，`code`/`messageKey` 未变，页面/脚本无新增硬编码文案
 - [ ] 单测通过；相关脚本/IT 通过
 - [ ] H2 schema 与迁移同步
 - [ ] README 与本文件已更新

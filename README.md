@@ -105,7 +105,9 @@ MySQL 下用 `GET_LOCK` 防并发）；生产建议改为 `validate`，由发布
 
 ## 4. REST API
 
-前缀 `/admin-auth`（`admin-auth.endpoint-prefix` 可配）。错误统一 `{"code","message"}`。
+前缀 `/admin-auth`（`admin-auth.endpoint-prefix` 可配）。错误统一
+`{"code","message","messageKey"}`：`code` / `messageKey` 是稳定契约（前端按 `code` 分支即可），
+`message` 按请求语言本地化。
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -159,6 +161,9 @@ MySQL 下用 `GET_LOCK` 防并发）；生产建议改为 `validate`，由发布
 | `keys.data-kek-version` | 1 | 当前数据密钥版本，写入 `key_version` 列 |
 | `keys.data-kek-history` | 空 | 历史密钥 `{版本: 密钥}`，用于解密旧密文（轮换用） |
 | `ui.enabled` | true | 内置页面 |
+| `i18n.enabled` | true | 识别 `Accept-Language`；false = 固定 `default-locale` |
+| `i18n.default-locale` | `zh-CN` | 不支持的语言回落目标，也是默认语言 |
+| `i18n.supported-locales` | `[zh-CN, en]` | 支持的语言标签（BCP-47） |
 | `bootstrap.*` | enabled / 空账号 | 初始 SUPER_ADMIN（EMAIL + STAFF_CODE） |
 
 密钥示例：
@@ -172,6 +177,33 @@ admin-auth:
 ```
 
 长度不是 32 字节会在启动时直接失败；启动日志只打印来源，不会打印密钥。
+
+### 5.1 国际化（`admin-auth.i18n.*`）
+
+- **文案在哪里**：`admin-auth-spring-boot-starter/src/main/resources/i18n/`
+  下的 `admin-auth-messages.properties`（英文，基础/兜底文件）与
+  `admin-auth-messages_zh_CN.properties`（中文）。两份键集合必须一致，有单测兜底。
+- **语言怎么来**：默认取 `Accept-Language`（宿主换 `LocaleResolver` 或包装请求即可改）；
+  `i18n.enabled=false` 固定用 `default-locale`；不支持的语言回落到 `default-locale`。
+  请求没带 `Accept-Language` 时按 Spring `LocaleResolver` 的结果，可用 `spring.web.locale=zh_CN`
+  固定默认语言，或替换 `LocaleResolver` 做会话级切换。
+- **响应长什么样**：
+
+  ```json
+  {"code":"AUTH_FAILED","message":"账号或密码错误","messageKey":"admin-auth.error.auth-failed"}
+  ```
+
+  `code` / `messageKey` 不随语言变化，`message` 是本地化文本；响应同时带
+  `Content-Language` 与 `Vary: Accept-Language`。宿主前端按 `code` 分支、直接展示
+  `message`，即可拿到当前语言。
+- **不接管宿主 i18n**：组件只注册 `AdminAuthMessages`，**不注册 `messageSource`**，
+  宿主已有的 `messages.properties` / 自定义 `MessageSource` 不受影响；需要统一文案入口时，
+  宿主声明自己的 `AdminAuthMessages` Bean 覆盖即可。
+- **内置页面**：5 个页面的文案由控制器注入模型（属性名 `i18n`），模板用
+  `th:text="${i18n['page.login.title']}"`，脚本用 `window.AA_I18N` + `t('js.xxx')`，
+  因此不依赖宿主是否配置 Thymeleaf 的 `#{}` 消息源。
+- **不做 i18n 的东西**：日志、审计 `detail`、库里的业务数据（角色、显示名、初始管理员名）
+  保持稳定，不随请求语言变化，否则历史审计无法检索与对比。
 
 ## 6. 接入宿主（三步）
 
@@ -272,7 +304,10 @@ powershell -ExecutionPolicy Bypass -File scripts/acceptance.ps1
   - 2FA 策略矩阵（5 模式 × 用户覆盖 × 同源 × require-totp × priority，含 ON_RISK 风险窗口）
   - 锁定双维度（5 次/15 分钟、换标识不可绕过、到期清零、风险窗口计数）
 
-- `admin-auth-spring-boot-starter`：`AdminAuthFlowIT`（Testcontainers MySQL）
+- `admin-auth-spring-boot-starter`：13 个单测 + `AdminAuthFlowIT`（Testcontainers MySQL）
+  - 国际化：中英 bundle 键集合一致性、`Accept-Language` 协商、`{0}` 占位符、
+    未知键回显、页面文案模型注入、错误响应 `code`/`messageKey` 稳定性
+  - `@Testcontainers(disabledWithoutDocker = true)`：无 Docker 自动跳过
   - 登录 → 改密 → 绑 TOTP → `/api/me` → `/admin/hello` → 登出 → 重登 → TOTP → 200
   - `@Testcontainers(disabledWithoutDocker = true)`：无 Docker 自动跳过
 - `scripts/acceptance.ps1`：13 步主链路验收（需 `REQUIRED_ALL`）
@@ -304,7 +339,9 @@ powershell -ExecutionPolicy Bypass -File scripts/acceptance.ps1
 - 密钥轮换：`key_version` + `data-kek-history` 已支持"新数据新密钥、旧数据可解密"；
   尚未提供批量重加密任务。
 - 用户管理：已提供创建/分页/启停/解锁/重置密码 API 与审计；未提供前端管理页面。
-- 仍有意不做：RBAC（业务权限归宿主）、i18n/品牌化、审计过滤分页、metrics/health、CORS 自动配置。
+- 国际化：只做中英两种（`zh-CN` / `en`），不做按用户偏好持久化语言（依赖 `Accept-Language`，
+  或由宿主自行控制）；`code` / `messageKey` 稳定，`message` 由 bundle 驱动。
+- 仍有意不做：RBAC（业务权限归宿主）、品牌化、审计过滤分页、metrics/health、CORS 自动配置。
 - v1 仅实现 TOTP；EMAIL_OTP/SMS_OTP 只有接口、表结构与 501 占位。
 - 恢复码登录成功后会删除全部因素并强制重新绑定（下次登录回到 `BIND_TOTP`）。
 - Boot 启动日志里的 `Using generated security password` 是 Spring Boot 自身生成的默认用户提示，

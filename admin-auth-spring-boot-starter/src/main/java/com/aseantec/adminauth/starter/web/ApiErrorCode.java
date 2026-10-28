@@ -2,34 +2,41 @@ package com.aseantec.adminauth.starter.web;
 
 import org.springframework.http.HttpStatus;
 
-/** 统一错误码（对应第 6 段错误码表）。 */
+import java.util.Locale;
+
+/**
+ * 统一错误码（对应第 6 段错误码表）。
+ *
+ * <p><b>i18n</b>：枚举只保留 HTTP 状态，文案由消息键
+ * {@code admin-auth.error.<code>} 决定（见 {@code i18n/admin-auth-messages*.properties}）。
+ * {@code code} 是稳定契约，不随语言变化；{@code message} 才是本地化文本。</p>
+ */
 public enum ApiErrorCode {
-    AUTH_FAILED(HttpStatus.UNAUTHORIZED, "账号或密码错误"),
-    TICKET_EXPIRED(HttpStatus.UNAUTHORIZED, "登录会话已过期，请重新登录"),
-    MFA_REQUIRED(HttpStatus.UNAUTHORIZED, "需要完成第二因素验证"),
-    MFA_LOCKED(HttpStatus.LOCKED, "尝试次数过多，请稍后再试"),
-    CHANNEL_FORBIDDEN(HttpStatus.BAD_REQUEST, "该验证通道与登录标识同源，已禁用"),
-    MFA_REQUIRED_BY_POLICY(HttpStatus.FORBIDDEN, "当前账号被要求启用 2FA"),
-    STEP_UP_REQUIRED(HttpStatus.FORBIDDEN, "需要重新完成二次验证"),
-    FORBIDDEN(HttpStatus.FORBIDDEN, "无权访问"),
-    NOT_IMPLEMENTED(HttpStatus.NOT_IMPLEMENTED, "该能力尚未实现"),
-    VALIDATION_FAILED(HttpStatus.BAD_REQUEST, "参数校验失败"),
-    PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "原密码不正确"),
-    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "服务器内部错误");
+    AUTH_FAILED(HttpStatus.UNAUTHORIZED),
+    TICKET_EXPIRED(HttpStatus.UNAUTHORIZED),
+    MFA_REQUIRED(HttpStatus.UNAUTHORIZED),
+    MFA_LOCKED(HttpStatus.LOCKED),
+    CHANNEL_FORBIDDEN(HttpStatus.BAD_REQUEST),
+    MFA_REQUIRED_BY_POLICY(HttpStatus.FORBIDDEN),
+    STEP_UP_REQUIRED(HttpStatus.FORBIDDEN),
+    FORBIDDEN(HttpStatus.FORBIDDEN),
+    NOT_IMPLEMENTED(HttpStatus.NOT_IMPLEMENTED),
+    VALIDATION_FAILED(HttpStatus.BAD_REQUEST),
+    PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST),
+    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR);
 
     private final HttpStatus status;
-    private final String defaultMessage;
 
-    ApiErrorCode(HttpStatus status, String defaultMessage) {
+    ApiErrorCode(HttpStatus status) {
         this.status = status;
-        this.defaultMessage = defaultMessage;
     }
 
     public HttpStatus status() {
         return status;
     }
 
-    public String defaultMessage() {
-        return defaultMessage;
+    /** 稳定消息键：{@code admin-auth.error.<kebab-case>}。 */
+    public String messageKey() {
+        return "admin-auth.error." + name().toLowerCase(Locale.ROOT).replace('_', '-');
     }
 }

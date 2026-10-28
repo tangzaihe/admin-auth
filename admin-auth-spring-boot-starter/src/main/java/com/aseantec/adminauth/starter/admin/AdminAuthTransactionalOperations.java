@@ -2,6 +2,8 @@ package com.aseantec.adminauth.starter.admin;
 
 import com.aseantec.adminauth.core.service.MfaService;
 import com.aseantec.adminauth.core.service.PasswordService;
+import com.aseantec.adminauth.starter.web.ApiErrorCode;
+import com.aseantec.adminauth.starter.web.ApiException;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
@@ -29,7 +31,7 @@ public class AdminAuthTransactionalOperations {
     public List<String> confirmTotpSetup(long userId, String code) {
         List<String> codes = transactionTemplate.execute(status -> mfaService.confirmTotpSetup(userId, code));
         if (codes == null) {
-            throw new IllegalStateException("TOTP 绑定失败");
+            throw new ApiException(ApiErrorCode.VALIDATION_FAILED, "admin-auth.error.totp-bind-failed");
         }
         return codes;
     }

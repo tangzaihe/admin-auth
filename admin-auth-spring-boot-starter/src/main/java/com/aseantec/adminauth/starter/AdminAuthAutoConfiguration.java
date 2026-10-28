@@ -1,6 +1,7 @@
 package com.aseantec.adminauth.starter;
 
 import com.aseantec.adminauth.starter.config.AdminAuthCoreConfiguration;
+import com.aseantec.adminauth.starter.config.AdminAuthI18nConfiguration;
 import com.aseantec.adminauth.starter.config.AdminAuthInfoConfiguration;
 import com.aseantec.adminauth.starter.config.AdminAuthJdbcConfiguration;
 import com.aseantec.adminauth.starter.config.AdminAuthSchemaConfiguration;
@@ -28,6 +29,7 @@ import org.springframework.context.annotation.Import;
 @EnableConfigurationProperties(AdminAuthProperties.class)
 @Import({
         AdminAuthCoreConfiguration.class,
+        AdminAuthI18nConfiguration.class,
         AdminAuthJdbcConfiguration.class,
         AdminAuthSecurityConfiguration.class,
         AdminAuthWebConfiguration.class,

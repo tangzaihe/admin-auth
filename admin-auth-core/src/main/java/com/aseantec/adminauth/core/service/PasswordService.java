@@ -2,6 +2,7 @@ package com.aseantec.adminauth.core.service;
 
 import com.aseantec.adminauth.core.domain.AdminUser;
 import com.aseantec.adminauth.core.domain.PasswordPolicyException;
+import com.aseantec.adminauth.core.domain.PasswordPolicyReason;
 import com.aseantec.adminauth.core.domain.UserStatus;
 import com.aseantec.adminauth.core.port.AdminUserRepository;
 import com.aseantec.adminauth.core.port.ClockProvider;
@@ -37,12 +38,12 @@ public class PasswordService {
      */
     public void changePassword(long userId, String oldPassword, String newPassword, boolean initialChange) {
         AdminUser user = users.findById(userId)
-                .orElseThrow(() -> new PasswordPolicyException("账号不存在"));
+                .orElseThrow(() -> new PasswordPolicyException(PasswordPolicyReason.USER_NOT_FOUND));
         if (user.status() != UserStatus.ACTIVE) {
-            throw new PasswordPolicyException("账号已停用");
+            throw new PasswordPolicyException(PasswordPolicyReason.USER_DISABLED);
         }
         if (oldPassword == null || !passwordVerifier.verify(oldPassword, user.passwordHash())) {
-            throw new PasswordPolicyException("原密码不正确");
+            throw new PasswordPolicyException(PasswordPolicyReason.OLD_PASSWORD_MISMATCH);
         }
         validate(newPassword, oldPassword);
         String hash = passwordVerifier.hash(newPassword);
@@ -51,13 +52,13 @@ public class PasswordService {
 
     protected void validate(String newPassword, String oldPassword) {
         if (newPassword == null || newPassword.length() < minLength) {
-            throw new PasswordPolicyException("密码长度至少 " + minLength + " 位");
+            throw new PasswordPolicyException(PasswordPolicyReason.TOO_SHORT, minLength);
         }
         if (newPassword.equals(oldPassword)) {
-            throw new PasswordPolicyException("新密码不能与原密码相同");
+            throw new PasswordPolicyException(PasswordPolicyReason.SAME_AS_OLD);
         }
         if (newPassword.isBlank()) {
-            throw new PasswordPolicyException("密码不能为空白字符");
+            throw new PasswordPolicyException(PasswordPolicyReason.BLANK);
         }
     }
 

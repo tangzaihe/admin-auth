@@ -3,6 +3,19 @@
 
     var prefix = window.AA_PREFIX || '/admin-auth';
     var CSRF_COOKIE = 'XSRF-TOKEN';
+    // 文案由服务端按请求语言注入（模板里的 window.AA_I18N），此处只做 {0} 占位符替换
+    var I18N = window.AA_I18N || {};
+
+    function t(key, value) {
+        var pattern = I18N[key];
+        if (typeof pattern !== 'string') {
+            return key;
+        }
+        if (value === undefined || value === null) {
+            return pattern;
+        }
+        return pattern.replace('{0}', String(value));
+    }
 
     function readCookie(name) {
         var parts = document.cookie ? document.cookie.split('; ') : [];
@@ -51,7 +64,7 @@
             data = null;
         }
         if (!response.ok) {
-            var error = new Error((data && data.message) || ('请求失败（' + response.status + '）'));
+            var error = new Error((data && data.message) || t('js.requestFailed', response.status));
             error.code = data && data.code;
             error.status = response.status;
             throw error;
@@ -121,7 +134,7 @@
             sessionStorage.setItem('aa.factors', JSON.stringify(data.factors || []));
             window.location.href = prefix + '/2fa';
         } else {
-            message('aa-message', '未知的登录状态：' + data.next, 'error');
+            message('aa-message', t('js.unknownNext', data.next), 'error');
         }
     }
 
@@ -168,7 +181,7 @@
         }
         var factor = factors.length ? factors[0] : 'TOTP';
         document.getElementById('aa-factor-label').textContent =
-            factor === 'TOTP' ? '认证器动态码' : factor;
+            factor === 'TOTP' ? t('js.factorTotp') : factor;
 
         var form = document.getElementById('aa-2fa-form');
         form.addEventListener('submit', async function (event) {
@@ -268,8 +281,8 @@
             }
         }
         document.getElementById('aa-hint').textContent = initial
-            ? '首次登录需修改初始密码：至少 12 位，且不能与原密码相同。'
-            : '密码至少 12 位；修改成功后需要重新登录。';
+            ? t('js.hintInitial')
+            : t('js.hintNormal');
 
         var form = document.getElementById('aa-password-form');
         form.addEventListener('submit', async function (event) {
@@ -279,7 +292,7 @@
             var newPassword = document.getElementById('aa-new-password').value;
             var confirmPassword = document.getElementById('aa-confirm-password').value;
             if (newPassword !== confirmPassword) {
-                message('aa-message', '两次输入的新密码不一致', 'error');
+                message('aa-message', t('js.passwordMismatch'), 'error');
                 return;
             }
             try {
@@ -295,7 +308,7 @@
                         method: 'POST',
                         body: { oldPassword: oldPassword, newPassword: newPassword }
                     });
-                    message('aa-message', '密码已修改，请重新登录', 'ok');
+                    message('aa-message', t('js.passwordChanged'), 'ok');
                     setTimeout(toLogin, 900);
                 }
             } catch (error) {
@@ -318,7 +331,7 @@
         }
         var list = document.getElementById('aa-codes');
         if (!codes.length) {
-            message('aa-message', '没有可展示的恢复码（可能已过期或已展示过）', 'error');
+            message('aa-message', t('js.noRecoveryCodes'), 'error');
         }
         codes.forEach(function (code) {
             var item = document.createElement('li');

@@ -20,6 +20,8 @@ import com.aseantec.adminauth.core.port.SecretCipher;
 import com.aseantec.adminauth.core.service.StaffCodeGenerator;
 import com.aseantec.adminauth.core.util.Masking;
 import com.aseantec.adminauth.starter.AdminAuthProperties;
+import com.aseantec.adminauth.starter.web.ApiErrorCode;
+import com.aseantec.adminauth.starter.web.ApiException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DuplicateKeyException;
@@ -126,12 +128,12 @@ public class AdminAuthUserAdminService {
             CreatedUser created = transactionTemplate.execute(status -> createInternal(
                     displayName, role, email, staffCode, password, actorUserId, AuditEvent.USER_CREATE));
             if (created == null) {
-                throw new IllegalStateException("创建账号失败");
+                throw new ApiException(ApiErrorCode.VALIDATION_FAILED, "admin-auth.user.create-failed");
             }
             return created;
         } catch (DuplicateKeyException race) {
             // 并发下预检查可能失效：唯一键兜底，转为可读的 400 而不是 500
-            throw new IllegalStateException("邮箱或 STAFF_CODE 已被使用，请更换后重试");
+            throw new ApiException(ApiErrorCode.VALIDATION_FAILED, "admin-auth.user.identity-taken");
         }
     }
 
@@ -146,7 +148,7 @@ public class AdminAuthUserAdminService {
             return temp;
         });
         if (temporaryPassword == null) {
-            throw new IllegalStateException("重置密码失败");
+            throw new ApiException(ApiErrorCode.VALIDATION_FAILED, "admin-auth.user.reset-failed");
         }
         return temporaryPassword;
     }
@@ -181,7 +183,7 @@ public class AdminAuthUserAdminService {
 
     public AdminUser requireUser(long userId) {
         return users.findById(userId)
-                .orElseThrow(() -> new IllegalStateException("账号不存在: " + userId));
+                .orElseThrow(() -> new ApiException(ApiErrorCode.VALIDATION_FAILED, "admin-auth.user.not-found"));
     }
 
     public List<AdminIdentity> identitiesOf(long userId) {
@@ -196,7 +198,8 @@ public class AdminAuthUserAdminService {
         String normalizedEmail = normalizer.normalize(IdentityType.EMAIL, email);
         byte[] emailHash = blindIndexer.index(IdentityType.EMAIL, normalizedEmail);
         if (identities.findActiveByTypeAndHash(IdentityType.EMAIL, emailHash).isPresent()) {
-            throw new IllegalStateException("邮箱已被使用: " + Masking.email(normalizedEmail));
+            throw new ApiException(ApiErrorCode.VALIDATION_FAILED, "admin-auth.user.email-taken",
+                    Masking.email(normalizedEmail));
         }
 
         String effectivePassword = isBlank(password) ? generateTemporaryPassword() : password;
@@ -205,7 +208,7 @@ public class AdminAuthUserAdminService {
                 true, 0, -1, 0, null, null, now, now);
         long userId = users.insert(draft);
         if (userId <= 0) {
-            throw new IllegalStateException("创建账号失败：未取得主键");
+            throw new ApiException(ApiErrorCode.VALIDATION_FAILED, "admin-auth.user.no-id");
         }
 
         insertIdentity(userId, IdentityType.EMAIL, normalizedEmail, Masking.email(normalizedEmail), true, now);
@@ -230,7 +233,8 @@ public class AdminAuthUserAdminService {
             String normalized = normalizer.normalize(IdentityType.STAFF_CODE, explicit);
             byte[] hash = blindIndexer.index(IdentityType.STAFF_CODE, normalized);
             if (identities.findActiveByTypeAndHash(IdentityType.STAFF_CODE, hash).isPresent()) {
-                throw new IllegalStateException("STAFF_CODE 已被使用: " + Masking.staffCode(normalized));
+                throw new ApiException(ApiErrorCode.VALIDATION_FAILED, "admin-auth.user.staff-code-taken",
+                        Masking.staffCode(normalized));
             }
             return normalized;
         }
@@ -242,7 +246,7 @@ public class AdminAuthUserAdminService {
                 return candidate;
             }
         }
-        throw new IllegalStateException("STAFF_CODE 生成冲突，请在请求中显式指定");
+        throw new ApiException(ApiErrorCode.VALIDATION_FAILED, "admin-auth.user.staff-code-conflict");
     }
 
     /** 生成满足长度要求的一次性密码：大小写、数字、符号各至少一个。 */

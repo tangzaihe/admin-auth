@@ -56,16 +56,16 @@ public class PreAuthTicketService {
         Map<String, PreAuthTicket> tickets = tickets(session);
         PreAuthTicket value = ticket == null ? null : tickets.get(ticket);
         if (value == null) {
-            throw new ApiException(ApiErrorCode.TICKET_EXPIRED, "登录票据不存在或已使用，请重新登录");
+            throw new ApiException(ApiErrorCode.TICKET_EXPIRED, "admin-auth.error.ticket-not-found");
         }
         if (value.expiredAt(clock.now().toEpochMilli())) {
             tickets.remove(ticket);
             session.setAttribute(SESSION_KEY, tickets);
-            throw new ApiException(ApiErrorCode.TICKET_EXPIRED, "登录票据已过期，请重新登录");
+            throw new ApiException(ApiErrorCode.TICKET_EXPIRED, "admin-auth.error.ticket-invalid");
         }
         if (allowedSteps != null && allowedSteps.length > 0
                 && java.util.Arrays.stream(allowedSteps).noneMatch(step -> step == value.step())) {
-            throw new ApiException(ApiErrorCode.TICKET_EXPIRED, "登录步骤不匹配，请重新登录");
+            throw new ApiException(ApiErrorCode.TICKET_EXPIRED, "admin-auth.error.ticket-step-mismatch");
         }
         return value;
     }

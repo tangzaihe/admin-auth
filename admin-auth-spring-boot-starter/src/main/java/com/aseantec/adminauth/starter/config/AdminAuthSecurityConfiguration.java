@@ -2,6 +2,7 @@ package com.aseantec.adminauth.starter.config;
 
 import com.aseantec.adminauth.core.port.ClockProvider;
 import com.aseantec.adminauth.starter.AdminAuthProperties;
+import com.aseantec.adminauth.starter.i18n.AdminAuthMessages;
 import com.aseantec.adminauth.starter.security.AdminAuthAccessDeniedHandler;
 import com.aseantec.adminauth.starter.security.AdminAuthEntryPoint;
 import com.aseantec.adminauth.starter.security.AdminAuthProtectedPathFilter;
@@ -43,15 +44,18 @@ public class AdminAuthSecurityConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public AdminAuthEntryPoint adminAuthEntryPoint(AdminAuthProperties properties, ObjectMapper objectMapper) {
-        return new AdminAuthEntryPoint(properties.getEndpointPrefix(), objectMapper);
+    public AdminAuthEntryPoint adminAuthEntryPoint(AdminAuthProperties properties,
+                                                    ObjectMapper objectMapper,
+                                                    AdminAuthMessages messages) {
+        return new AdminAuthEntryPoint(properties.getEndpointPrefix(), objectMapper, messages);
     }
 
     @Bean
     @ConditionalOnMissingBean
     public AdminAuthAccessDeniedHandler adminAuthAccessDeniedHandler(AdminAuthProperties properties,
-                                                                     ObjectMapper objectMapper) {
-        return new AdminAuthAccessDeniedHandler(properties.getEndpointPrefix(), objectMapper);
+                                                                     ObjectMapper objectMapper,
+                                                                     AdminAuthMessages messages) {
+        return new AdminAuthAccessDeniedHandler(properties.getEndpointPrefix(), objectMapper, messages);
     }
 
     @Bean

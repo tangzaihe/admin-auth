@@ -65,10 +65,10 @@ public class MfaApiController {
         PreAuthTicket ticket = tickets.require(session, body.ticket(), LoginStep.SELECT_FACTOR);
         if (body.factorType() != MfaFactorType.TOTP) {
             if (properties.getMfa().isForbidSameChannel() && body.factorType().sameChannelAs(ticket.identityType())) {
-                throw new ApiException(ApiErrorCode.CHANNEL_FORBIDDEN, "该验证通道与登录标识同源，已禁用");
+                throw new ApiException(ApiErrorCode.CHANNEL_FORBIDDEN, ApiErrorCode.CHANNEL_FORBIDDEN.messageKey());
             }
             // v1 只实现 TOTP，OTP 仅留 SPI
-            throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "EMAIL_OTP / SMS_OTP 通道尚未实现（v1.1）");
+            throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "admin-auth.error.otp-not-implemented");
         }
         boolean verified;
         try {
@@ -76,15 +76,15 @@ public class MfaApiController {
         } catch (MfaVerificationException e) {
             boolean usable = tickets.registerFailure(session, ticket);
             if (e.locked() || !usable) {
-                throw new ApiException(ApiErrorCode.MFA_LOCKED, "第二因素尝试次数过多，请稍后再试");
+                throw new ApiException(ApiErrorCode.MFA_LOCKED, ApiErrorCode.MFA_LOCKED.messageKey());
             }
-            throw new ApiException(ApiErrorCode.AUTH_FAILED, e.getMessage());
+            throw new ApiException(ApiErrorCode.AUTH_FAILED, e.messageKey(), e.args());
         }
         if (!verified) {
             // verifyTotp 返回 false（码不匹配且未达到锁定阈值）时绝不能建会话
             boolean usable = tickets.registerFailure(session, ticket);
             ApiErrorCode code = usable ? ApiErrorCode.AUTH_FAILED : ApiErrorCode.MFA_LOCKED;
-            throw new ApiException(code, "验证码不正确");
+            throw new ApiException(code, "admin-auth.mfa.code-invalid");
         }
         tickets.consume(session, ticket.value());
         // 2FA 通过：清掉该账号的风险计数（ON_RISK 依赖它判断下一次登录）
@@ -103,7 +103,7 @@ public class MfaApiController {
         if (!ok) {
             boolean usable = tickets.registerFailure(session, ticket);
             ApiErrorCode code = usable ? ApiErrorCode.AUTH_FAILED : ApiErrorCode.MFA_LOCKED;
-            throw new ApiException(code, "恢复码不正确或已使用");
+            throw new ApiException(code, "admin-auth.error.recovery-code-invalid");
         }
         tickets.consume(session, ticket.value());
         lockout.clearAllForUser(ticket.userId());
@@ -152,7 +152,7 @@ public class MfaApiController {
     /** v1 不发送 OTP：没有 MfaChannelSender Bean 时返回 501。 */
     @PostMapping("/mfa/otp/send")
     public ApiModels.TotpConfirmResponse sendOtp(@RequestBody(required = false) ApiModels.OtpSendRequest body) {
-        throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "EMAIL_OTP / SMS_OTP 通道尚未实现（v1.1）");
+        throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "admin-auth.error.otp-not-implemented");
     }
 
     private long resolveBindingUser(HttpServletRequest request, String ticketValue) {
@@ -165,6 +165,6 @@ public class MfaApiController {
 
     private AdminUser requireUser(long userId) {
         return userProvider.findById(userId)
-                .orElseThrow(() -> new ApiException(ApiErrorCode.TICKET_EXPIRED, "账号不存在，请重新登录"));
+                .orElseThrow(() -> new ApiException(ApiErrorCode.TICKET_EXPIRED, "admin-auth.error.account-not-found"));
     }
 }

@@ -16,40 +16,40 @@ public final class ApiModels {
 
     // ---------- 请求 ----------
 
-    public record LoginRequest(@NotNull(message = "不能为空") IdentityType identityType,
-                               @NotBlank(message = "不能为空") String identifier,
-                               @NotBlank(message = "不能为空") String password) {
+    public record LoginRequest(@NotNull IdentityType identityType,
+                               @NotBlank String identifier,
+                               @NotBlank String password) {
     }
 
-    public record PasswordChangeInitialRequest(@NotBlank(message = "不能为空") String ticket,
-                                               @NotBlank(message = "不能为空") String oldPassword,
-                                               @NotBlank(message = "不能为空") String newPassword) {
+    public record PasswordChangeInitialRequest(@NotBlank String ticket,
+                                               @NotBlank String oldPassword,
+                                               @NotBlank String newPassword) {
     }
 
-    public record MfaVerifyRequest(@NotBlank(message = "不能为空") String ticket,
-                                   @NotNull(message = "不能为空") MfaFactorType factorType,
-                                   @NotBlank(message = "不能为空") String code) {
+    public record MfaVerifyRequest(@NotBlank String ticket,
+                                   @NotNull MfaFactorType factorType,
+                                   @NotBlank String code) {
     }
 
-    public record MfaRecoveryRequest(@NotBlank(message = "不能为空") String ticket,
-                                     @NotBlank(message = "不能为空") String code) {
+    public record MfaRecoveryRequest(@NotBlank String ticket,
+                                     @NotBlank String code) {
     }
 
     public record TotpSetupInitRequest(String ticket) {
     }
 
     public record TotpSetupConfirmRequest(String ticket,
-                                          @NotBlank(message = "不能为空") String code) {
+                                          @NotBlank String code) {
     }
 
     public record OtpSendRequest(String ticket, MfaFactorType factorType) {
     }
 
-    public record PasswordChangeRequest(@NotBlank(message = "不能为空") String oldPassword,
-                                        @NotBlank(message = "不能为空") String newPassword) {
+    public record PasswordChangeRequest(@NotBlank String oldPassword,
+                                        @NotBlank String newPassword) {
     }
 
-    public record MfaDisableRequest(@NotBlank(message = "不能为空") String password) {
+    public record MfaDisableRequest(@NotBlank String password) {
     }
 
     public record MfaRequireRequest(int value) {
@@ -86,8 +86,8 @@ public final class ApiModels {
     // ---------- 管理台用户管理 ----------
 
     public record CreateUserRequest(String displayName,
-                                    @NotBlank(message = "不能为空") String role,
-                                    @NotBlank(message = "不能为空") String email,
+                                    @NotBlank String role,
+                                    @NotBlank String email,
                                     String staffCode,
                                     String password) {
     }

@@ -1,40 +1,45 @@
 <!DOCTYPE html>
-<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<html lang="zh-CN" th:lang="${lang}" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>内部管理端 · 二次验证</title>
+    <title th:text="${i18n['page.mfa.title']}">内部管理端 · 二次验证</title>
     <link rel="stylesheet" th:href="@{/admin-auth/app.css}"/>
 </head>
 <body class="aa-body">
 <main class="aa-card">
-    <div class="aa-brand">二次验证</div>
-    <p class="aa-sub">请输入 <strong id="aa-factor-label">认证器动态码</strong>（30 秒刷新）</p>
+    <div class="aa-brand" th:text="${i18n['page.mfa.brand']}">二次验证</div>
+    <p class="aa-sub"><span th:text="${i18n['page.mfa.enter']}">请输入</span>
+        <strong id="aa-factor-label" th:text="${i18n['page.mfa.factor.totp']}">认证器动态码</strong><span
+                th:text="${i18n['page.mfa.refreshHint']}">（30 秒刷新）</span></p>
 
     <form id="aa-2fa-form" class="aa-form">
-        <label class="aa-field">动态码
+        <label class="aa-field"><span th:text="${i18n['page.mfa.code']}">动态码</span>
             <input id="aa-code" inputmode="numeric" autocomplete="one-time-code" maxlength="8"
-                   pattern="[0-9 ]*" placeholder="6 位数字" required/>
+                   pattern="[0-9 ]*" th:placeholder="${i18n['page.mfa.codePlaceholder']}"
+                   placeholder="6 位数字" required/>
         </label>
-        <button class="aa-btn" type="submit">验 证</button>
+        <button class="aa-btn" type="submit" th:text="${i18n['page.mfa.submit']}">验 证</button>
         <p id="aa-message" class="aa-message" role="alert"></p>
     </form>
 
-    <button class="aa-link-button" id="aa-use-recovery" type="button">使用恢复码登录</button>
+    <button class="aa-link-button" id="aa-use-recovery" type="button"
+            th:text="${i18n['page.mfa.useRecovery']}">使用恢复码登录</button>
 
     <form id="aa-recovery-form" class="aa-form aa-hidden">
-        <label class="aa-field">恢复码
+        <label class="aa-field"><span th:text="${i18n['page.mfa.recoveryCode']}">恢复码</span>
             <input id="aa-recovery-code" autocomplete="off" placeholder="XXXXX-XXXXX" required/>
         </label>
-        <button class="aa-btn" type="submit">用恢复码登录</button>
+        <button class="aa-btn" type="submit" th:text="${i18n['page.mfa.recoverySubmit']}">用恢复码登录</button>
         <p id="aa-recovery-message" class="aa-message" role="alert"></p>
     </form>
 
-    <p class="aa-foot"><a id="aa-back-login" href="#">返回登录</a></p>
+    <p class="aa-foot"><a id="aa-back-login" href="#" th:text="${i18n['page.mfa.backToLogin']}">返回登录</a></p>
 </main>
 
 <script th:inline="javascript">
     window.AA_PREFIX = /*[[@{/admin-auth}]]*/ '/admin-auth';
+    window.AA_I18N = /*[[${i18n}]]*/ {};
 </script>
 <script th:src="@{/admin-auth/app.js}"></script>
 <script>AA.twoFactorPage();</script>

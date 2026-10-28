@@ -47,6 +47,14 @@ admin-auth:
     mode: ISOLATED
     provide-host-fallback: true
 
+  # 国际化：默认识别 Accept-Language；zh-CN 为默认语言，也是不支持语言的回落目标
+  i18n:
+    enabled: true
+    default-locale: zh-CN
+    supported-locales:
+      - zh-CN
+      - en
+
   session:
     cookie-name: JSESSIONID
     secure-cookie: false      # 本地 HTTP 调试；生产必须 true

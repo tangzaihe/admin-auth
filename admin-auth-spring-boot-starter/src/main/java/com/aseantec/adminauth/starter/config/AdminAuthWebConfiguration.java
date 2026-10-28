@@ -7,6 +7,7 @@ import com.aseantec.adminauth.core.service.MfaService;
 import com.aseantec.adminauth.core.service.PasswordService;
 import com.aseantec.adminauth.starter.admin.AdminAuthTransactionalOperations;
 import com.aseantec.adminauth.starter.admin.AdminAuthUserAdminService;
+import com.aseantec.adminauth.starter.i18n.AdminAuthMessages;
 import com.aseantec.adminauth.starter.security.AdminSessionService;
 import com.aseantec.adminauth.starter.web.AccountApiController;
 import com.aseantec.adminauth.starter.web.AdminApiController;
@@ -40,8 +41,8 @@ public class AdminAuthWebConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public ApiErrorHandler adminAuthApiErrorHandler() {
-        return new ApiErrorHandler();
+    public ApiErrorHandler adminAuthApiErrorHandler(AdminAuthMessages messages) {
+        return new ApiErrorHandler(messages);
     }
 
     @Bean
@@ -100,7 +101,7 @@ public class AdminAuthWebConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnClass(SpringTemplateEngine.class)
     @ConditionalOnProperty(prefix = "admin-auth.ui", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public AdminAuthPageController adminAuthPageController() {
-        return new AdminAuthPageController();
+    public AdminAuthPageController adminAuthPageController(AdminAuthMessages messages) {
+        return new AdminAuthPageController(messages);
     }
 }

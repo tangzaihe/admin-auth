@@ -13,7 +13,7 @@ public final class CurrentUser {
     public static AdminSessionPrincipal require(HttpServletRequest request, AdminSessionService sessions) {
         AdminSessionPrincipal principal = sessions.current(request);
         if (principal == null) {
-            throw new ApiException(ApiErrorCode.AUTH_FAILED, "未登录或会话已过期");
+            throw new ApiException(ApiErrorCode.AUTH_FAILED, "admin-auth.error.not-logged-in");
         }
         return principal;
     }

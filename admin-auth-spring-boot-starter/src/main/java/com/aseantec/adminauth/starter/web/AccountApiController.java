@@ -96,11 +96,11 @@ public class AccountApiController {
         AdminUser user = users.findById(principal.userId())
                 .orElseThrow(() -> new ApiException(ApiErrorCode.AUTH_FAILED));
         if (!passwordVerifier.verify(body.password(), user.passwordHash())) {
-            throw new ApiException(ApiErrorCode.PASSWORD_MISMATCH, "原密码不正确");
+            throw new ApiException(ApiErrorCode.PASSWORD_MISMATCH);
         }
         // 强制策略（REQUIRED_ALL / 命中角色的 REQUIRED_BY_ROLE）下不允许自行关闭 2FA
         if (mfaPolicy.mandatory(user)) {
-            throw new ApiException(ApiErrorCode.MFA_REQUIRED_BY_POLICY, "当前安全策略要求启用 2FA，无法关闭");
+            throw new ApiException(ApiErrorCode.MFA_REQUIRED_BY_POLICY, "admin-auth.error.mfa-cannot-disable");
         }
         operations.disableMfa(principal.userId());
         return Map.of("ok", true);    }

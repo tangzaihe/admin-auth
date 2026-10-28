@@ -41,6 +41,7 @@ public class AdminAuthProperties {
     private Schema schema = new Schema();
     private Security security = new Security();
     private Ui ui = new Ui();
+    private I18n i18n = new I18n();
     private Bootstrap bootstrap = new Bootstrap();
     private Audit audit = new Audit();
 
@@ -138,6 +139,14 @@ public class AdminAuthProperties {
 
     public void setUi(Ui ui) {
         this.ui = ui;
+    }
+
+    public I18n getI18n() {
+        return i18n;
+    }
+
+    public void setI18n(I18n i18n) {
+        this.i18n = i18n;
     }
 
     public Bootstrap getBootstrap() {
@@ -562,6 +571,43 @@ public class AdminAuthProperties {
 
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
+        }
+    }
+
+    /** 国际化：默认识别 Accept-Language，宿主可通过 LocaleResolver / 请求包装自行适配。 */
+    public static class I18n {
+
+        /** false = 固定 default-locale，忽略 Accept-Language（单语言部署用）。 */
+        private boolean enabled = true;
+
+        /** 请求语言不受支持时的语言，同时也是未命中条目时的兜底。 */
+        private String defaultLocale = "zh-CN";
+
+        /** 支持的语言标签（BCP-47），第一版为 zh-CN / en。 */
+        private List<String> supportedLocales = new ArrayList<>(List.of("zh-CN", "en"));
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getDefaultLocale() {
+            return defaultLocale;
+        }
+
+        public void setDefaultLocale(String defaultLocale) {
+            this.defaultLocale = defaultLocale;
+        }
+
+        public List<String> getSupportedLocales() {
+            return supportedLocales;
+        }
+
+        public void setSupportedLocales(List<String> supportedLocales) {
+            this.supportedLocales = supportedLocales;
         }
     }
 

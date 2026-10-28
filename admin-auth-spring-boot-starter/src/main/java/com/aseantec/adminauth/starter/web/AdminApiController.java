@@ -96,11 +96,11 @@ public class AdminApiController {
                                             HttpServletRequest request) {
         AdminSessionPrincipal actor = requireAdmin(request);
         if (id == actor.userId() && !body.enabled()) {
-            throw new ApiException(ApiErrorCode.VALIDATION_FAILED, "不能停用当前登录账号");
+            throw new ApiException(ApiErrorCode.VALIDATION_FAILED, "admin-auth.error.cannot-disable-self");
         }
         AdminUser target = userAdminService.requireUser(id);
         if (!body.enabled() && target.superAdmin() && users.countByRole("SUPER_ADMIN") <= 1) {
-            throw new ApiException(ApiErrorCode.VALIDATION_FAILED, "至少保留一个可用的 SUPER_ADMIN");
+            throw new ApiException(ApiErrorCode.VALIDATION_FAILED, "admin-auth.error.last-super-admin");
         }
         userAdminService.updateStatus(id, body.enabled(), actor.userId());
         if (!body.enabled()) {
@@ -142,9 +142,10 @@ public class AdminApiController {
                                               HttpServletRequest request) {
         AdminSessionPrincipal actor = requireAdmin(request);
         if (body.value() != -1 && body.value() != 0 && body.value() != 1) {
-            throw new ApiException(ApiErrorCode.VALIDATION_FAILED, "value 只能是 -1 / 0 / 1");
+            throw new ApiException(ApiErrorCode.VALIDATION_FAILED, "admin-auth.error.invalid-mfa-require-value");
         }
-        users.findById(id).orElseThrow(() -> new ApiException(ApiErrorCode.VALIDATION_FAILED, "账号不存在"));
+        users.findById(id).orElseThrow(() ->
+                new ApiException(ApiErrorCode.VALIDATION_FAILED, "admin-auth.error.account-not-found"));
         users.updateMfaRequired(id, body.value());
         audit(actor, id, "{\"value\":" + body.value() + "}");
         sessions.deleteAllSessionsOf(id);
@@ -173,13 +174,13 @@ public class AdminApiController {
     private AdminSessionPrincipal requireAdmin(HttpServletRequest request) {
         AdminSessionPrincipal principal = CurrentUser.require(request, sessions);
         if (!principal.superAdmin()) {
-            throw new ApiException(ApiErrorCode.FORBIDDEN, "需要超级管理员权限");
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "admin-auth.error.super-admin-required");
         }
         Instant verifiedAt = principal.mfaVerifiedAt();
         boolean stepUp = principal.mfaVerified() && verifiedAt != null
                 && verifiedAt.plus(properties.getMfa().getStepUpTtl()).isAfter(clock.now());
         if (!stepUp) {
-            throw new ApiException(ApiErrorCode.STEP_UP_REQUIRED, "请先完成二次验证后再操作");
+            throw new ApiException(ApiErrorCode.STEP_UP_REQUIRED, ApiErrorCode.STEP_UP_REQUIRED.messageKey());
         }
         return principal;
     }
